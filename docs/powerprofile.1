@@ -29,11 +29,15 @@ See
 .BR powerprofile.conf (5).
 
 .PP
-The profiles
+Two profiles are chosen automatically from the AC adapter: the ones named by
+.B on_battery
+and
+.B on_ac
+in the configuration, which default to
 .B bat
 and
-.B ac
-are chosen automatically from the AC adapter. Any other profile, such as
+.BR ac .
+Any other profile, such as
 .B gaming
 or
 .BR saver ,
@@ -68,21 +72,21 @@ default.
 Print the profile names, one per line, for completion and scripts.
 .TP
 .B \-\-auto
-Apply
-.B ac
-on AC power and
-.B bat
-on battery. A manual override is kept while it still fits its
+Apply the
+.B on_ac
+profile on AC power and the
+.B on_battery
+profile on battery. A manual override is kept while it still fits its
 .B only
 setting and dropped once it does not, so plugging in ends a
 battery\-only override and unplugging ends an AC\-only one.
 .TP
 .BI \-\-profile " NAME"
-Apply the profile NAME now. A profile other than
-.B bat
+Apply the profile NAME now. A profile other than the
+.B on_battery
 and
-.B ac
-becomes the manual override. A profile that is limited by
+.B on_ac
+ones becomes the manual override. A profile that is limited by
 .B only
 to the other power source is refused.
 .TP
@@ -157,7 +161,7 @@ The firmware RAPL limits captured this boot.
 
 .SH EXAMPLES
 .PP
-Apply whichever of bat and ac fits, as the systemd unit and the udev rule do:
+Apply the on_battery or on_ac profile, as the systemd unit and the udev rule do:
 .PP
 .RS
 .nf

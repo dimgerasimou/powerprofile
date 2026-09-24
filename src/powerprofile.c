@@ -172,6 +172,10 @@ static Profile defaults; /* the [default] section, inherited by every profile */
 static Profile *cur;     /* the section being read */
 static int nprof, have_defaults;
 static char backlight[64];
+/* The profiles --auto applies. The defaults are the names this program
+ * always used, so a config that never mentions them keeps working. */
+static char on_battery[32] = "bat";
+static char on_ac[32]      = "ac";
 static int dry;
 
 static int         in_list(const char *const *list, const char *word);
@@ -190,6 +194,7 @@ static int         ac_online(void);
 static void        save(const char *path, const char *val);
 static int         fits(const Profile *p, int ac);
 static const char *pick(int ac, char *ov, size_t ovsz);
+static int         is_base(const char *name);
 static void        rapl_defaults(char *pl1, char *pl2);
 static const char *limit(const char *watts, const char *def, char *buf, size_t bufsz);
 static void        set_brightness(const char *pct);
@@ -338,9 +343,14 @@ conf_cb(void *user, const char *sec, const char *key, const char *val)
 	}
 
 	if (!sec[0]) { /* before the first section: global settings */
-		if (strcmp(key, "backlight") != 0)
+		if (strcmp(key, "backlight") == 0)
+			setstr(backlight, sizeof(backlight), key, val);
+		else if (strcmp(key, "on_battery") == 0)
+			setstr(on_battery, sizeof(on_battery), key, val);
+		else if (strcmp(key, "on_ac") == 0)
+			setstr(on_ac, sizeof(on_ac), key, val);
+		else
 			return INI_UNKNOWN;
-		setstr(backlight, sizeof(backlight), key, val);
 		return INI_OK;
 	}
 
@@ -412,8 +422,12 @@ load(const char *path)
 		die("%s: malformed config", path);
 	fclose(f);
 
-	if (!find("bat") || !find("ac"))
-		die("%s: needs [bat] and [ac] sections", path);
+	if (!find(on_battery))
+		die("%s: on_battery is \"%s\", but there is no [%s] section",
+		    path, on_battery, on_battery);
+	if (!find(on_ac))
+		die("%s: on_ac is \"%s\", but there is no [%s] section",
+		    path, on_ac, on_ac);
 
 	for (int i = 0; i < nprof; i++)
 		inherit(&profiles[i]);
@@ -584,7 +598,7 @@ fits(const Profile *p, int ac)
 }
 
 /* The profile --auto chooses: the manual override, left in ov, if it still
- * fits the power source, otherwise ac or bat.
+ * fits the power source, otherwise the on_ac or on_battery profile.
  */
 static const char *
 pick(int ac, char *ov, size_t ovsz)
@@ -594,7 +608,15 @@ pick(int ac, char *ov, size_t ovsz)
 	if (readfile(OVERRIDE_PATH, ov, ovsz) == 0 && (p = find(ov)) && fits(p, ac))
 		return ov;
 
-	return ac ? "ac" : "bat";
+	return ac ? on_ac : on_battery;
+}
+
+/* Is `name` one of the two profiles --auto chooses between? Any other
+ * profile is a manual override. */
+static int
+is_base(const char *name)
+{
+	return strcmp(name, on_battery) == 0 || strcmp(name, on_ac) == 0;
 }
 
 /* The firmware RAPL limits, captured the first time this runs after boot so
@@ -964,9 +986,9 @@ action_list(void)
 	return 0;
 }
 
-/* --auto and --profile. A profile other than bat and ac is a manual
- * override: it lasts until it stops fitting its `only =`, or until another
- * one is applied.
+/* --auto and --profile. A profile other than the on_battery and on_ac ones
+ * is a manual override: it lasts until it stops fitting its `only =`, or
+ * until another one is applied.
  */
 static int
 action_apply(const Options *o)
@@ -996,8 +1018,7 @@ action_apply(const Options *o)
 			die("%s is for %s power", p->name,
 			    strcmp(p->only, "ac") == 0 ? "AC" : "battery");
 
-		save(OVERRIDE_PATH,
-		     strcmp(p->name, "bat") != 0 && strcmp(p->name, "ac") != 0 ? p->name : NULL);
+		save(OVERRIDE_PATH, is_base(p->name) ? NULL : p->name);
 	}
 
 	apply(p, readfile(LAST_PATH, last, sizeof(last)) < 0 || strcmp(last, p->name) != 0);
@@ -1018,8 +1039,8 @@ usage(void)
 	      "--version           Print version and exit\n"
 	      "--status            Print the AC state and live values (default)\n"
 	      "--list              Print the profile names\n"
-	      "--auto              Apply bat or ac from the AC adapter, keeping a manual\n"
-	      "                    override while it still fits\n"
+	      "--auto              Apply the on_battery or on_ac profile from the AC\n"
+	      "                    adapter, keeping a manual override while it still fits\n"
 	      "--profile NAME      Apply one profile now\n"
 	      "--dry-run           With --auto or --profile, print what would be done\n"
 	      "--config FILE       Read FILE instead of " CONF_PATH "\n"

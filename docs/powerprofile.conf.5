@@ -16,12 +16,13 @@ or
 is a comment; comments cannot follow a value.
 
 .PP
-The profiles
-.B [bat]
+Two profiles are chosen automatically from the AC adapter, the ones named by
+.B on_battery
 and
-.B [ac]
-are required and are chosen automatically from the AC adapter. Any other
-profile is a manual override, applied with
+.B on_ac
+(see
+.BR "GLOBAL KEYS" ).
+Both must exist. Any other profile is a manual override, applied with
 .BR "powerprofile \-\-profile" .
 
 .PP
@@ -72,6 +73,29 @@ Device under
 .IR /sys/class/backlight .
 Hybrid laptops often expose several, so set it explicitly. Default: the
 first one found.
+.TP
+.B on_battery
+The profile
+.B powerprofile \-\-auto
+applies on battery. Default:
+.BR bat .
+.TP
+.B on_ac
+The profile
+.B powerprofile \-\-auto
+applies on AC power. Default:
+.BR ac .
+.PP
+Both must name a profile in the file, and neither can be
+.BR default .
+Applying one of them by name with
+.B \-\-profile
+clears the manual override, like
+.B \-\-auto
+does, while any other profile becomes the override. They are profile names;
+the
+.B only
+key takes power sources, and is not affected.
 
 .SH PROFILE KEYS
 .TP

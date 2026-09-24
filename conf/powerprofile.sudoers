@@ -7,7 +7,7 @@
 # --dry-run included. Add one line per manual profile defined in
 # /etc/powerprofile.conf, and adjust the path if you built with another PREFIX.
 USER ALL=(root) NOPASSWD: /usr/local/bin/powerprofile --auto, \
-	/usr/local/bin/powerprofile --profile bat, \
-	/usr/local/bin/powerprofile --profile ac, \
+	/usr/local/bin/powerprofile --profile battery, \
+	/usr/local/bin/powerprofile --profile balanced, \
 	/usr/local/bin/powerprofile --profile gaming, \
 	/usr/local/bin/powerprofile --profile saver

@@ -341,6 +341,64 @@ expect "--list prints the profile names" "bat ac gaming saver" "$(pp --list | tr
 pp --status >/dev/null 2>&1
 expect "--status runs" "0" "$?"
 
+# --- on_battery and on_ac name the profiles --auto applies ---
+{
+	printf 'on_battery = battery\non_ac = balanced\n'
+	sed -e 's/^\[bat\]/[battery]/' -e 's/^\[ac\]/[balanced]/' "$conf"
+} > "$root/named.conf"
+
+named() {
+	"$root/powerprofile" --config "$root/named.conf" "$@"
+}
+
+applied() {
+	printf 'last=%s override=%s' "$(val "$root/run/powerprofile-last")" \
+		"$(val "$root/run/powerprofile-override")"
+}
+
+expect "the base profiles can have any name" "battery balanced gaming saver" \
+	"$(named --list | tr '\n' ' ' | sed 's/ $//')"
+
+battery
+named --profile saver >/dev/null 2>&1
+expect "a manual override still works with renamed base profiles" \
+	"last=saver override=saver" "$(applied)"
+named --auto >/dev/null 2>&1
+expect "auto keeps the override" "last=saver override=saver" "$(applied)"
+named --profile battery >/dev/null 2>&1
+expect "applying the on_battery profile clears the override" \
+	"last=battery override=-" "$(applied)"
+
+plug
+named --auto >/dev/null 2>&1
+expect "auto on AC applies the on_ac profile" "last=balanced override=-" "$(applied)"
+named --profile gaming >/dev/null 2>&1
+expect "gaming is an override on AC" "last=gaming override=gaming" "$(applied)"
+named --profile balanced >/dev/null 2>&1
+expect "applying the on_ac profile clears the override" \
+	"last=balanced override=-" "$(applied)"
+
+battery
+named --auto >/dev/null 2>&1
+expect "auto on battery applies the on_battery profile" \
+	"last=battery override=-" "$(applied)"
+named --profile bat >/dev/null 2>&1
+expect "the default names are gone once the keys rename them" "1" "$?"
+
+printf 'on_battery = nope\n[bat]\nepp = power\n[ac]\nepp = power\n' > "$root/bad.conf"
+out=$("$root/powerprofile" --config "$root/bad.conf" --list 2>&1)
+expect "config error: on_battery names no profile" "1" "$?"
+case $out in
+*'on_battery is "nope"'*) ok "ok    " "...and the message names the key" ;;
+*) ok "FAIL  " "on_battery message: $out"; failures=$((failures + 1)) ;;
+esac
+printf 'on_ac = nope\n[bat]\nepp = power\n[ac]\nepp = power\n' > "$root/bad.conf"
+"$root/powerprofile" --config "$root/bad.conf" --list >/dev/null 2>&1
+expect "config error: on_ac names no profile" "1" "$?"
+printf 'on_ac = default\n[default]\nepp = power\n[bat]\nepp = power\n[ac]\nepp = power\n' > "$root/bad.conf"
+"$root/powerprofile" --config "$root/bad.conf" --list >/dev/null 2>&1
+expect "config error: [default] is not a profile on_ac can name" "1" "$?"
+
 # --- config errors ---
 bad() { # WHAT SNIPPET
 	printf '[bat]\nepp = power\n[ac]\nepp = power\n%s\n' "$2" > "$root/bad.conf"

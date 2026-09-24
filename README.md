@@ -1,7 +1,7 @@
 # powerprofile
 
 Power profiles for MSI laptops from one config file: any number of named
-profiles (`bat`, `ac`, `gaming`, `saver`, ...), each setting the CPU energy
+profiles (`battery`, `balanced`, `gaming`, `saver`, ...), each setting the CPU energy
 performance preference, turbo and performance cap, RAPL power limits, PCIe
 ASPM, Wi-Fi power saving, the embedded controller through the
 [msi-ec](https://github.com/BeardOverflow/msi-ec) driver (performance
@@ -69,7 +69,7 @@ does it when the AC adapter is plugged or unplugged.
 ```
 powerprofile                          # status (default)
 powerprofile --list                   # the profile names
-powerprofile --auto                   # bat or ac, keeping a manual override that still fits
+powerprofile --auto                   # the on_battery or on_ac profile, keeping a manual override that still fits
 powerprofile --profile gaming         # apply one profile now
 powerprofile --dry-run --profile saver
 powerprofile-x --once --verbose       # apply the current refresh rate once
@@ -81,8 +81,10 @@ powerprofile-x --once --verbose       # apply the current refresh rate once
 
 ## Config
 
-`/etc/powerprofile.conf`, INI style, full-line `#` comments only. `[bat]` and
-`[ac]` are required; any other section is a manual override.
+`/etc/powerprofile.conf`, INI style, full-line `#` comments only. Two profiles
+are chosen automatically from the AC adapter, named by `on_battery` and
+`on_ac` (defaults `bat` and `ac`); both must exist. Any other section is a
+manual override.
 
 `[default]` is what every profile starts from: a profile takes each key it
 leaves out from there, so it only lists what differs. This is what makes
@@ -99,6 +101,7 @@ its section and key.
 | key | |
 |-----|-|
 | `backlight` | global: device under `/sys/class/backlight`, default the first one |
+| `on_battery`, `on_ac` | global: the profile `--auto` applies on battery / on AC, default `bat` / `ac` |
 | `epp` | `performance`, `balance_performance`, `balance_power`, `power`; needs HWP, see Notes |
 | `governor` | cpufreq governor for every CPU; what exists depends on the driver, an unavailable one is refused |
 | `epb` | `performance`, `balance-performance`, `normal`, `balance-power`, `power`; works without HWP |
@@ -124,7 +127,8 @@ each profile listing only its differences.
   names it.
 - A manual override (`gaming`, `saver`, ...) lasts until it stops fitting its
   `only`, or another profile is applied: plugging in drops a `bat`-only
-  override, unplugging drops an `ac`-only one.
+  override, unplugging drops an `ac`-only one. Applying the `on_battery` or
+  `on_ac` profile by name is not an override, it clears any.
 - Brightness is applied only when the profile changes, so re-applying it
   after resume never undoes a brightness you set by hand.
 - The firmware RAPL limits are read the first time the tool runs after boot
