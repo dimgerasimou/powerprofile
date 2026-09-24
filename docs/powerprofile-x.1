@@ -1,0 +1,80 @@
+.TH POWERPROFILE-X 1 "September 2026" "powerprofile VERSION" "General Commands Manual"
+.SH NAME
+powerprofile\-x \- follow the power profile and set the display refresh rate
+.SH SYNOPSIS
+.B powerprofile\-x
+.RB [ \-\-once ]
+.RB [ \-\-config
+.IR file ]
+.RB [ \-\-state
+.IR file ]
+.RB [ \-\-output
+.IR name ]
+.RB [ \-\-verbose ]
+.RB [ \-\-version ]
+.RB [ \-\-help ]
+
+.SH DESCRIPTION
+.B powerprofile\-x
+is the user half of
+.BR powerprofile (1).
+It runs inside your X session, follows the profile
+.B powerprofile
+applied last, and sets the refresh rate of the internal panel from the
+.B refresh
+setting of that profile, or of
+.B [default]
+if the profile has none.
+
+.PP
+It needs no privileges, no
+.B XAUTHORITY
+and no output name: it uses your own X connection and finds the internal
+panel by itself, the first connected output named
+.BR eDP* ,
+.B LVDS*
+or
+.BR DSI* .
+The rate is chosen among the modes the panel has at its current resolution:
+.B max
+picks the highest, a number picks the closest.
+
+.PP
+It waits on the state file with inotify, so it uses no CPU between profile
+changes. The refresh rate is applied when the profile name changes and at
+startup, never when the same profile is applied again, so a manual
+.BR xrandr (1)
+change stays. It exits when the X server does.
+
+.PP
+Start it from your window manager's autostart.
+
+.SH OPTIONS
+.TP
+.B \-\-once
+Apply the current profile once and exit.
+.TP
+.BI \-\-config " FILE"
+Read FILE instead of
+.IR /etc/powerprofile.conf .
+.TP
+.BI \-\-state " FILE"
+Follow FILE instead of
+.IR /run/powerprofile\-last .
+.TP
+.BI \-\-output " NAME"
+Use this output instead of the internal panel.
+.TP
+.B \-\-verbose
+Log what is being done to standard error.
+.TP
+.B \-\-version
+Print version and exit.
+.TP
+.B \-\-help
+Print a usage summary and exit.
+
+.SH SEE ALSO
+.BR powerprofile (1),
+.BR powerprofile.conf (5),
+.BR xrandr (1)

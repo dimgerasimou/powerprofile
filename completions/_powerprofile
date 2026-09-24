@@ -1,0 +1,28 @@
+#compdef powerprofile
+# zsh completion for powerprofile
+# Install as: <dir on $fpath>/_powerprofile
+#         e.g. /usr/share/zsh/site-functions/_powerprofile
+
+_powerprofile()
+{
+	local state
+
+	_arguments -s \
+		'(- *)--help[print help and exit]' \
+		'(- *)--version[print version and exit]' \
+		'--status[print the AC state and live values]' \
+		'--list[print the profile names]' \
+		'--auto[apply bat or ac from the AC adapter]' \
+		'--profile=[apply one profile now]:profile:->profiles' \
+		'--dry-run[print what would be done]' \
+		'--config=[read another config file]:config file:_files' \
+		'--verbose[log actions to stderr]'
+
+	if [[ $state == profiles ]]; then
+		local -a profiles
+		profiles=(${(f)"$(powerprofile --list 2>/dev/null)"})
+		compadd -a profiles
+	fi
+}
+
+_powerprofile "$@"

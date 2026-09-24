@@ -1,0 +1,219 @@
+.TH POWERPROFILE.CONF 5 "September 2026" "powerprofile VERSION" "File Formats Manual"
+.SH NAME
+powerprofile.conf \- configuration of powerprofile
+.SH DESCRIPTION
+.I /etc/powerprofile.conf
+defines the profiles that
+.BR powerprofile (1)
+applies. It is an INI file: a
+.B [name]
+line starts a profile, followed by
+.B key = value
+lines. A line whose first character is
+.B #
+or
+.B ;
+is a comment; comments cannot follow a value.
+
+.PP
+The profiles
+.B [bat]
+and
+.B [ac]
+are required and are chosen automatically from the AC adapter. Any other
+profile is a manual override, applied with
+.BR "powerprofile \-\-profile" .
+
+.PP
+A key that neither the profile nor
+.B [default]
+sets leaves that setting alone, except
+.B pl1
+and
+.BR pl2 ,
+which restore the firmware default. A value the key does not accept makes
+the whole file invalid, and is reported with its section and key.
+
+.PP
+As root,
+.B powerprofile
+refuses the file unless it is owned by root and not writable by others.
+
+.SH DEFAULTS
+The optional
+.B [default]
+section holds what every profile starts from. A profile takes each key it
+leaves out from
+.BR [default] ,
+so it only has to list what differs. This is what makes switching reliable:
+a setting one profile changes, such as
+.B super_battery
+or
+.BR cooler_boost ,
+is put back by the next profile that does not name it. Without a value in
+.B [default]
+it would stay as the last profile left it.
+
+.PP
+Any profile key can be given there except
+.BR only ,
+which would restrict every profile. A profile's own value replaces the
+default; there is no way to unset one, so leave a setting out of
+.B [default]
+if some profile should not touch it.
+.B [default]
+is not a profile: it cannot be applied or listed.
+
+.SH GLOBAL KEYS
+Keys before the first section.
+.TP
+.B backlight
+Device under
+.IR /sys/class/backlight .
+Hybrid laptops often expose several, so set it explicitly. Default: the
+first one found.
+
+.SH PROFILE KEYS
+.TP
+.B epp
+Energy performance preference:
+.BR performance ,
+.BR balance_performance ,
+.B balance_power
+or
+.BR power .
+Needs HWP (Intel Speed Shift). Without it the kernel runs intel_pstate in
+passive mode, as the intel_cpufreq driver, and there is no EPP: use
+.B governor
+and
+.B epb
+instead. Applying the profile says so, and
+.B powerprofile \-\-status
+shows the driver in use.
+.TP
+.B governor
+The cpufreq governor, for every CPU. Which ones exist depends on the driver:
+.BR performance ,
+.BR powersave ,
+.BR schedutil
+and others with intel_cpufreq, only performance and powersave with
+intel_pstate in active mode. A governor the driver does not offer is refused
+before anything is written, and the message lists what is supported. With
+intel_cpufreq,
+.B powersave
+holds the lowest frequency.
+.TP
+.B epb
+Energy performance bias, the older hint that works without HWP:
+.BR performance ,
+.BR balance\-performance ,
+.BR normal ,
+.B balance\-power
+or
+.BR power .
+.TP
+.B aspm
+PCIe ASPM policy:
+.BR default ,
+.B powersave
+or
+.BR powersupersave .
+The kernel refuses this when the firmware has ASPM disabled; see
+.B dmesg | grep -i aspm .
+.TP
+.B turbo
+.RB ( on / off )
+CPU turbo.
+.TP
+.B max_perf
+Cap on CPU performance, as a percentage from 1 to 100 of the maximum; 100
+means no cap.
+.TP
+.BR pl1 ", " pl2
+RAPL sustained and burst power limit, in watts.
+.TP
+.B nvidia_powerd
+.RB ( on / off )
+Start or stop
+.BR nvidia\-powerd ,
+for Dynamic Boost. It only does something where the firmware allows Dynamic
+Boost; otherwise the service starts and logs that the firmware disabled it.
+.TP
+.B wifi_powersave
+.RB ( on / off )
+Wi\-Fi power saving, on every wireless interface, applied with
+.BR iw (8)
+and kept on the NetworkManager connection for later reconnects.
+.TP
+.B brightness
+Screen brightness, as a percentage from 1 to 100 of the maximum. Applied
+when the profile changes.
+.TP
+.B refresh
+Display refresh rate: a number in Hz, or
+.B max
+for the highest at the current resolution. Applied by
+.BR powerprofile\-x (1).
+.TP
+.B only
+.BR ac " or " bat .
+The profile can only be used on that power source, and stops being the
+manual override when the source changes.
+.TP
+.B run
+An extra shell command, run as root when the profile is applied.
+
+.SH EMBEDDED CONTROLLER KEYS
+Settings of an MSI laptop's embedded controller, written through the
+.BR msi\-ec
+kernel driver, which must be loaded. What is accepted depends on the
+firmware, so these values are checked when the profile is applied, not when
+the file is read. A value the firmware does not accept, or an attribute it
+does not have, is reported and skipped.
+.TP
+.B shift_mode
+CPU/GPU performance profile, commonly
+.BR eco ,
+.BR comfort ,
+.B sport
+or
+.BR turbo .
+.TP
+.B fan_mode
+Fan speed profile, commonly
+.BR auto ,
+.B silent
+or
+.BR advanced .
+.TP
+.B cooler_boost
+.RB ( on / off )
+Run the fans at maximum regardless of temperature.
+.TP
+.B super_battery
+.RB ( on / off )
+MSI's extended battery mode.
+.TP
+.BR charge_start ", " charge_end
+Battery percentages at which charging begins and stops.
+.TP
+.B kbd_backlight
+Keyboard backlight level, from 0 to the LED's maximum.
+
+.PP
+The values of
+.B shift_mode
+and
+.B fan_mode
+that a machine accepts are shown by
+.BR "msiecctl \-\-get available_shift_modes"
+and
+.BR "msiecctl \-\-get available_fan_modes" .
+
+.SH FILES
+.I /etc/powerprofile.conf
+
+.SH SEE ALSO
+.BR powerprofile (1),
+.BR powerprofile\-x (1),
+.BR msiecctl (1)

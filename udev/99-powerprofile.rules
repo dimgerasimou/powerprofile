@@ -1,0 +1,2 @@
+# Pick bat or ac again when the AC adapter is plugged or unplugged.
+SUBSYSTEM=="power_supply", ACTION=="change", ATTR{type}=="Mains", RUN+="@BINDIR@/powerprofile --auto"

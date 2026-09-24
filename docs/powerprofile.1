@@ -1,0 +1,188 @@
+.TH POWERPROFILE 1 "September 2026" "powerprofile VERSION" "General Commands Manual"
+.SH NAME
+powerprofile \- switch between laptop power profiles
+.SH SYNOPSIS
+.B powerprofile
+.RB [ \-\-status ]
+.RB [ \-\-list ]
+.RB [ \-\-auto ]
+.RB [ \-\-profile
+.IR name ]
+.RB [ \-\-dry\-run ]
+.RB [ \-\-config
+.IR file ]
+.RB [ \-\-verbose ]
+.RB [ \-\-version ]
+.RB [ \-\-help ]
+
+.SH DESCRIPTION
+.B powerprofile
+applies a power profile: a named group of settings read from
+.IR /etc/powerprofile.conf .
+A profile can set the CPU energy performance preference, turbo and
+performance cap, the RAPL power limits, PCIe ASPM, Wi\-Fi power saving, the
+embedded controller settings of an MSI laptop (through the
+.BR msi\-ec
+kernel driver), nvidia\-powerd, and the screen brightness, and can run an
+extra command.
+See
+.BR powerprofile.conf (5).
+
+.PP
+The profiles
+.B bat
+and
+.B ac
+are chosen automatically from the AC adapter. Any other profile, such as
+.B gaming
+or
+.BR saver ,
+is a manual override.
+
+.PP
+.B powerprofile
+runs as root and never talks to X. The display refresh rate of a profile is
+applied by
+.BR powerprofile\-x (1),
+which follows the profile recorded in
+.IR /run/powerprofile\-last .
+
+.PP
+With no options,
+.B powerprofile
+prints its status, equivalent to
+.BR \-\-status .
+
+.SH OPTIONS
+.TP
+.B \-\-status
+Print whether the AC adapter is online, the profile applied last, the manual
+override if any, the cpufreq driver and governor, and the live CPU and RAPL values.
+.B epp: n/a
+means this machine has no energy performance preference, which needs HWP
+(Intel Speed Shift); the governor and the energy performance bias are the
+controls then. Needs no privileges. This is the
+default.
+.TP
+.B \-\-list
+Print the profile names, one per line, for completion and scripts.
+.TP
+.B \-\-auto
+Apply
+.B ac
+on AC power and
+.B bat
+on battery. A manual override is kept while it still fits its
+.B only
+setting and dropped once it does not, so plugging in ends a
+battery\-only override and unplugging ends an AC\-only one.
+.TP
+.BI \-\-profile " NAME"
+Apply the profile NAME now. A profile other than
+.B bat
+and
+.B ac
+becomes the manual override. A profile that is limited by
+.B only
+to the other power source is refused.
+.TP
+.B \-\-dry\-run
+With
+.B \-\-auto
+or
+.BR \-\-profile ,
+print what would be done and change nothing. Needs no privileges.
+.TP
+.BI \-\-config " FILE"
+Read FILE instead of
+.IR /etc/powerprofile.conf .
+.TP
+.B \-\-verbose
+Log what is being done to standard error.
+.TP
+.B \-\-version
+Print version and exit.
+.TP
+.B \-\-help
+Print a usage summary and exit.
+
+.SH BEHAVIOUR
+Brightness is applied only when the profile changes, so applying the same
+profile again, for example after resume, does not undo a brightness you set
+by hand.
+
+.PP
+The firmware RAPL limits are read the first time
+.B powerprofile
+runs after boot and are restored whenever a profile leaves
+.B pl1
+and
+.B pl2
+unset.
+
+.PP
+Wi\-Fi power saving is set on every wireless interface, found in sysfs so no
+device is named, with
+.BR iw (8):
+that changes the running device at once, which NetworkManager cannot do, as it
+refuses to reapply the setting to an active connection. The same setting is
+also put on the interface's NetworkManager connection, in memory only, so that
+a later reconnect keeps it. Without NetworkManager only the running device
+changes. A connection made after the profile was applied uses NetworkManager's
+own default until the profile is applied again.
+
+.PP
+Embedded controller values are checked against what the firmware accepts
+before anything is written. A value it does not accept, or an attribute the
+firmware does not have, is reported and skipped; the rest of the profile is
+still applied.
+
+.SH FILES
+.TP
+.I /etc/powerprofile.conf
+The configuration. As root,
+.B powerprofile
+refuses a file that is not owned by root or that others can write, because
+.B run
+executes as root.
+.TP
+.I /run/powerprofile\-last
+The profile applied last.
+.TP
+.I /run/powerprofile\-override
+The active manual override.
+.TP
+.I /run/powerprofile\-rapl
+The firmware RAPL limits captured this boot.
+
+.SH EXAMPLES
+.PP
+Apply whichever of bat and ac fits, as the systemd unit and the udev rule do:
+.PP
+.RS
+.nf
+sudo powerprofile \-\-auto
+.fi
+.RE
+.PP
+Switch to the gaming profile, then back:
+.PP
+.RS
+.nf
+sudo powerprofile \-\-profile gaming
+sudo powerprofile \-\-auto
+.fi
+.RE
+.PP
+See what a profile would do without doing it:
+.PP
+.RS
+.nf
+powerprofile \-\-dry\-run \-\-profile saver
+.fi
+.RE
+
+.SH SEE ALSO
+.BR powerprofile.conf (5),
+.BR powerprofile\-x (1),
+.BR msiecctl (1)

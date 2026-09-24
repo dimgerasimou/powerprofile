@@ -1,0 +1,22 @@
+[Unit]
+Description=Apply the power profile
+Documentation=man:powerprofile(1) man:powerprofile.conf(5)
+After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+
+[Service]
+Type=oneshot
+ExecStart=@BINDIR@/powerprofile --auto
+
+# Runs as root to write sysfs and to run the config's commands; take away
+# what it will never use.
+NoNewPrivileges=yes
+ProtectHome=yes
+PrivateTmp=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+
+[Install]
+WantedBy=multi-user.target suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
